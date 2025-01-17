@@ -1,6 +1,10 @@
 import requests
 from bs4 import BeautifulSoup
 
+from datetime import datetime, timedelta
+
+from tqdm import tqdm
+
 def get_paper_uids(date:str):
     url = "https://huggingface.co/papers"
     params = {"date":date}
@@ -16,16 +20,20 @@ def get_paper_uids(date:str):
 
     return paper_uids
 
-def download_pdf(paper_uids:list):
-    
+def generate_dates(start_date, num_days):
+    start = datetime.strptime(start_date, "%Y-%m-%d")
+    return [(start - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(num_days)]
+
+
+def download_pdf(paper_uids:list) -> int:
     url = "https://arxiv.org/pdf"
-    paper_uids = get_paper_uids(date="2025-01-16")
 
     for uid in paper_uids :
         pdf_url=f"{url}/{uid}"
         save_path=f"papers/{uid}.pdf"
 
         response = requests.get(pdf_url)
+
         if response.status_code == 200:
             with open(save_path, 'wb') as file:
                 file.write(response.content)
@@ -34,8 +42,13 @@ def download_pdf(paper_uids:list):
             raise Exception(f"Failed to download PDF: {response.status_code}")
 
 def crawl_huggingface_papers():
-    paper_uids = get_paper_uids(date="2025-01-16")
-    download_pdf(paper_uids=paper_uids)
+    today = datetime.now().strftime("%Y-%m-%d")
+    num_days = 50
+    dates = generate_dates(start_date=today, num_days=num_days)
+
+    for date in tqdm(dates) :
+        paper_uids = get_paper_uids(date=date)
+        download_pdf(paper_uids=paper_uids)
 
 if __name__ == "__main__":
     results = crawl_huggingface_papers()
